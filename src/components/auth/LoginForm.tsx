@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-
+import Link from 'next/link';
 export default function LoginForm():React.JSX.Element {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -81,16 +81,16 @@ supabaseKey:'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZi
           />
           <p className="mt-4 text-center text-sm text-gray-600">
        Dont have an account?{' '}
-        <a href="/signup" className="font-medium text-blue-600 hover:text-blue-500">
+        <Link href="/signup" className="font-medium text-blue-600 hover:text-blue-500">
         Sign UP
-        </a>
+        </Link>
       </p>
 
         <p className="mt-4 text-center text-sm text-gray-600">
       Want to proceed as Guest ?
-        <a href="/" className="font-medium text-blue-600 hover:text-blue-500">
+        <Link href="/" className="font-medium text-blue-600 hover:text-blue-500">
       Go Ahead
-        </a>
+        </Link>
       </p>
         </div>
         <button
