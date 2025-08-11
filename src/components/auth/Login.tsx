@@ -1,8 +1,68 @@
 'use client'
 
 import { useState } from 'react'
-import { supabase } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import { supabase } from '@/lib/supabase/client'
+import Link from 'next/link'
+
+// Custom Button component to replace missing UI library
+const Button = ({
+  children,
+  type = 'button',
+  disabled = false,
+  className = '',
+  ...props
+}: {
+  children: React.ReactNode
+  type?: 'button' | 'submit' | 'reset'
+  disabled?: boolean
+  className?: string
+} & React.ButtonHTMLAttributes<HTMLButtonElement>) => {
+  return (
+    <button
+      type={type}
+      disabled={disabled}
+      className={`px-4 py-2 rounded-md font-medium transition-colors ${
+        disabled
+          ? 'bg-gray-300 cursor-not-allowed'
+          : 'bg-blue-600 hover:bg-blue-700 text-white'
+      } ${className}`}
+      {...props}
+    >
+      {children}
+    </button>
+  )
+}
+
+// Custom Input component
+const Input = ({
+  id,
+  type = 'text',
+  value,
+  onChange,
+  required = false,
+  className = '',
+  ...props
+}: {
+  id: string
+  type?: string
+  value: string
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void
+  required?: boolean
+  className?: string
+} & React.InputHTMLAttributes<HTMLInputElement>) => {
+  return (
+    <input
+      id={id}
+      type={type}
+      value={value}
+      onChange={onChange}
+      required={required}
+      className={`block w-full rounded-md border border-gray-300 p-2 shadow-sm focus:border-blue-500 focus:ring-blue-500 ${className}`}
+      {...props}
+    />
+  )
+}
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -17,74 +77,81 @@ export default function Login() {
     setError(null)
 
     try {
-      const { error: supabaseError } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithPassword({
         email,
-        password,
+        password
       })
 
-      if (supabaseError) throw supabaseError
-      router.push('/profile')
-    } catch (error) {
-      // Type-safe error handling
-      if (error instanceof Error) {
-        setError(error.message)
-      } else {
-        setError('An unknown error occurred during login')
-      }
+      if (error) throw error
+      router.push('/dashboard')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Login failed')
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-md">
-      <h1 className="text-2xl font-bold mb-6 text-center">Log In</h1>
-      {error && (
-        <div className="mb-4 p-2 bg-red-100 text-red-700 rounded">
-          {error}
+    <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 p-4">
+      <div className="w-full max-w-md space-y-6 rounded-lg bg-white p-8 shadow-md">
+        <div className="space-y-2 text-center">
+          <h1 className="text-2xl font-bold text-gray-900">Welcome back</h1>
+          <p className="text-gray-600">
+            Enter your credentials to access your account
+          </p>
         </div>
-      )}
-      <form onSubmit={handleLogin} className="space-y-4">
-        <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-            Email
-          </label>
-          <input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-          />
+
+        {error && (
+          <div className="rounded-md bg-red-50 p-3 text-center text-red-600">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleLogin} className="space-y-4">
+          <div className="space-y-2">
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+              Email
+            </label>
+            <Input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+              Password
+            </label>
+            <Input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </div>
+
+          <Button type="submit" className="w-full" disabled={loading}>
+            {loading ? 'Signing in...' : 'Sign in'}
+          </Button>
+        </form>
+
+        <div className="text-center text-sm text-gray-600">
+          Don&apos;t have an account?{' '}
+          <Link href="/signup" className="font-medium text-blue-600 hover:underline">
+            Sign up
+          </Link>
         </div>
-        <div>
-          <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-            Password
-          </label>
-          <input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-          />
+
+        <div className="text-center text-sm">
+          <Link href="/forgot-password" className="font-medium text-blue-600 hover:underline">
+            Forgot password?
+          </Link>
         </div>
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-        >
-          {loading ? 'Logging in...' : 'Log In'}
-        </button>
-      </form>
-      <p className="mt-4 text-center text-sm text-gray-600">
-        Don't have an account?{' '}
-        <a href="/signup" className="font-medium text-blue-600 hover:text-blue-500">
-          Sign up
-        </a>
-      </p>
+      </div>
     </div>
   )
 }
