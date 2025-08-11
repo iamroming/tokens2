@@ -1,95 +1,84 @@
-// app/verify-email/page.tsx
-'use client'
+'use client';
 
-import { useEffect, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
-import { supabase } from '@/utils/supabase/client'
-import Link from 'next/link'
+import { useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
+import { supabase } from '@/lib/supabase/client'; // Make sure this path is correct
 
 export default function VerifyEmailPage() {
-  const [status, setStatus] = useState<'verifying' | 'verified' | 'invalid' | 'error'>('verifying')
-  const [error, setError] = useState<string | null>(null)
-  const router = useRouter()
-  const searchParams = useSearchParams()
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const token = searchParams.get('token');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isVerified, setIsVerified] = useState(false);
 
-  useEffect(() => {
-    const verifyEmail = async () => {
-      try {
-        // 1. Extract token and email from URL
-        const token = searchParams.get('token')
-        const email = searchParams.get('email')
-        const type = searchParams.get('type') || 'email'
+  const handleVerify = async () => {
+    if (!token) return;
+    
+    setIsLoading(true);
+    setError(null);
 
-        // 2. Check for required parameters
-        if (!token || !email) {
-          setStatus('invalid')
-          setError('This verification link is incomplete. Please check your email for the complete link.')
-          return
-        }
+    try {
+      const { error } = await supabase.auth.verifyOtp({
+        type: 'email',
+        token_hash: token,
+      });
 
-        // 3. Verify the token
-        const { error: verificationError } = await supabase.auth.verifyOtp({
-          email,
-          token,
-          type: type as 'email' | 'magiclink' | 'recovery' | 'invite'
-        })
-
-        if (verificationError) throw verificationError
-
-        // 4. Mark as verified
-        setStatus('verified')
-        setTimeout(() => router.push('/dashboard'), 3000)
-      } catch (err) {
-        setStatus('error')
-        setError(
-          err instanceof Error 
-            ? err.message 
-            : 'Verification failed. Please try again or request a new verification email.'
-        )
+      if (error) {
+        throw error;
       }
-    }
 
-    verifyEmail()
-  }, [router, searchParams])
+      setIsVerified(true);
+      setTimeout(() => router.push('/dashboard'), 2000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Verification failed');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4">
-      {status === 'verifying' && (
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-2">Verifying Email...</h1>
-          <p>Please wait while we verify your email address.</p>
-        </div>
-      )}
+      <div className="w-full max-w-md p-8 space-y-4 bg-white rounded-lg shadow-md">
+        <h1 className="text-2xl font-bold text-center">Verify Your Email</h1>
+        
+        <p className="text-center text-gray-600">
+          We&apos;ve sent a verification link to your email address. Please click
+          the button to verify your account.
+        </p>
 
-      {status === 'verified' && (
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-2 text-green-600">Email Verified!</h1>
-          <p>You'll be redirected to your dashboard shortly.</p>
-        </div>
-      )}
+        {error && (
+          <p className="text-center text-red-500">{error}</p>
+        )}
 
-      {(status === 'invalid' || status === 'error') && (
-        <div className="text-center max-w-md">
-          <h1 className="text-2xl font-bold mb-2 text-red-600">
-            {status === 'invalid' ? 'Invalid Verification Link' : 'Verification Failed'}
-          </h1>
-          <p className="mb-4">{error}</p>
-          <div className="flex flex-col space-y-2">
-            <Link
-              href="/login"
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
-            >
-              Return to Login
-            </Link>
-            <Link
-              href="/resend-verification"
-              className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition"
-            >
-              Resend Verification Email
-            </Link>
-          </div>
+        {isVerified ? (
+          <p className="text-center text-green-600">
+            Email verified successfully! Redirecting...
+          </p>
+        ) : token ? (
+          <button
+            onClick={handleVerify}
+            disabled={isLoading}
+            className={`w-full px-4 py-2 font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 ${
+              isLoading ? 'opacity-75 cursor-not-allowed' : ''
+            }`}
+          >
+            {isLoading ? 'Verifying...' : 'Verify Email'}
+          </button>
+        ) : (
+          <p className="text-center text-gray-600">
+            If you didn&apos;t receive an email, please check your spam folder
+            or request a new verification link.
+          </p>
+        )}
+
+        <div className="text-center">
+          <Link href="/" className="text-blue-600 hover:underline">
+            Return to homepage
+          </Link>
         </div>
-      )}
+      </div>
     </div>
-  )
+  );
 }
